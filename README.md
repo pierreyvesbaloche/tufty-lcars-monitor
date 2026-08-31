@@ -1,4 +1,4 @@
-# 🚀 Tufty 2040 LCARS System Monitor
+# 📊 Tufty 2040 LCARS System Monitor
 
 ![Aperçu Tufty LCARS Monitor](assets/02.png)
 
