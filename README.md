@@ -1,8 +1,10 @@
 # 🚀 Tufty 2040 LCARS System Monitor
 
+![Aperçu Tufty LCARS Monitor](assets/02.png)
+
 A **Star Trek LCARS** style system monitoring tool for Raspberry Pi using a **Pimoroni Tufty 2040** (RP2040) display.
 
-## 📌 Features
+## 🎮 Features
 - **Standby / Waiting Screen:** Displays an LCARS standby status until initial data is received over USB.
 - **Real-time Metrics:** Monitors CPU, RAM, Disk Usage, and active network IPs (ETH/WIFI).
 - **Dynamic Gauge Colors:** Color transitions automatically based on workload (Normal → Amber at 80% → Red at 90%).
