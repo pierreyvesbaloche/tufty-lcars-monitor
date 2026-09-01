@@ -32,6 +32,7 @@ A **Star Trek LCARS** style system monitoring tool for Raspberry Pi using a **Pi
 cd host
 chmod +x setup_env.sh
 ./setup_env.sh
+```
 
 ### 3. Command Line Arguments (`sender.py`)
 
