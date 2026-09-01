@@ -1,0 +1,14 @@
+[Unit]
+Description=Tufty 2040 LCARS System Monitor Sender
+After=network.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/tufty-lcars-monitor/host
+ExecStart=/home/pi/tufty-lcars-monitor/.venv/bin/python /home/pi/tufty-lcars-monitor/host/sender.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
