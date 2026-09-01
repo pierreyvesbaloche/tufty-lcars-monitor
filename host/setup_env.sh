@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-echo "=== Raspberry Pi Environment Setup ==="
+echo "=== Host Environment Setup ==="
 
 # 1. Update system packages
 sudo apt update
@@ -25,5 +25,5 @@ echo ""
 echo "=== Setup completed successfully! ==="
 echo "To run the script:"
 echo "  source .venv/bin/activate"
-echo "  python monitor_sender.py"
+echo "  python host/sender.py"
 
