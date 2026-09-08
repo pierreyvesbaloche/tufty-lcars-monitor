@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [1.0.0] - 2026-09-01
+## [1.0.0] - 2026-09-08
 
 ### ✨ Added
 - **Tufty 2040 LCARS Display Interface (`tufty/main.py`)**:
@@ -32,6 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Automatic filtering of virtual adapters, VPNs, and loopbacks (`docker`, `tun`, `tap`, `veth`, etc.).
   - **Timezone Offset Support**: Added `-o` / `--offset` command-line argument to `host/sender.py` to specify timezone offsets (e.g., `-o 2` for UTC+2).
   - **Complete English Localization**: Standardized all logs, terminal outputs, error messages, and code comments in English.
+  - **Automatic connection**: Automatically detect the port to which the Tufty is connected to.
 
 - **Tooling & Documentation**:
   - Integrated `mpremote` USB serial support (e.g., `COM7` under Windows).
