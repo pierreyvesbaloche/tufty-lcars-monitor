@@ -129,6 +129,9 @@ def main():
 
     last_sync_time = 0
     SYNC_INTERVAL = 60  # Send time sync every 60 seconds
+    last_ping = 0
+    PING_INTERVAL = 2  # Send heartbeat PING frame every 2 seconds (1.2)
+    ping_counter = 0
 
     while True:
         try:
@@ -162,6 +165,15 @@ def main():
                 # Display time sync message ONLY in debug mode
                 if args.debug:
                     print(f"[TIME SYNC] Sent time payload: {time_str} (Offset {args.offset:+d}h)")
+
+            # Heartbeat is its own frame type (1.2): one PING:<n> line per
+            # PING_INTERVAL, independently of telemetry and time sync.
+            # <n> is a monotonic counter (wraps at 65535) so a stuck host
+            # repeating the same line is distinguishable from a live one.
+            if current_now - last_ping >= PING_INTERVAL:
+                ping_counter = (ping_counter + 1) % 65536
+                ser.write(f"PING:{ping_counter}\n".encode('utf-8'))
+                last_ping = current_now
 
             if args.debug:
                 while ser.in_waiting:
