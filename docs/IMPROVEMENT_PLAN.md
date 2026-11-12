@@ -8,32 +8,36 @@
 - `[ ]` planned — `[~]` started — `[x]` done
 
 ## ⚠️ AGENT STATE (live)
-> **Last updated:** 2026-11-12 (this session)
-> **Current task:** §3.3 battery / power indicator — **code complete, in push/PR phase**.
+> **Last updated:** 2026-11-12 (this session, after hardware verification)
+> **Current task:** §3.3 battery / power indicator — **hardware-verified, ready for merge**.
 >
-> **Branch:** `13-tufty-battery-fuel-gauge` (local, **NOT pushed**).
+> **Branch:** `13-tufty-battery-fuel-gauge` (pushed to origin).
 > **Base:** `origin/main` at `6578f28` (merge of PR #12).
-> **Commits on branch (oldest → newest):**
-> 1. `4b9fe99` — `feat(tufty): battery / power indicator (3.3)` — `tufty/main.py` only (148 insertions, 1 deletion).
-> 2. `0829dc9` — `docs: battery indicator — changelog, README, setup guide, plan` — 4 doc files (25 insertions, 2 deletions).
+> **Commits on branch (oldest → newest, 12 total):**
+> 1. `4b9fe99` — `feat(tufty): battery / power indicator (3.3)` — `tufty/main.py` only.
+> 2. `0829dc9` — `docs: battery indicator — changelog, README, setup guide, plan` — 4 doc files.
+> 3. `189fc21` — `docs(plan): add AGENT STATE block for §3.3 (in-progress tracking)`.
+> 4. `8912108` — `fix(tufty): battery icon position + USB bolt visibility (field feedback)` — round 1.
+> 5. `a3e32e2` — `fix(tufty): battery icon — bolt inside body, align with AUTO/MAN text` — round 2.
+> 6. `d572355` — `fix(tufty): battery icon — mode string left, bolt bigger, icon rightmost` — round 3.
+> 7. `bc727b2` — `fix(tufty): USB bolt — diagonal zigzag (2x2 bars, 1 px apart)` — round 4.
+> 8. `2cd5396` — `fix(tufty): USB bolt — centered, 3x3 bars (bigger, diagonal)` — round 5.
+> 9. `c1683a2` — `fix(tufty): USB bolt — vertically centered, 4x4 bars (bigger)` — round 6.
+> 10. `7924a86` — `fix(tufty): USB bolt — vertically centered, 3 px offset (stretched)` — round 7.
+> 11. `260acb6` — `fix(tufty): USB bolt — 3-bar zigzag (2x2 bars, 1 px offset each)` — round 8.
+> 12. `db5aee2` — `fix(tufty): USB bolt — 4x2 bars, moved 2 px down` — round 9, **final**.
 >
-> **Status:** `[~]` started → **ready for user push + PR**.
-> **Blocking:** user needs to push the branch and open PR #13.
+> **Status:** `[x]` done → **hardware-verified, ready for merge**.
+> **Blocking:** user needs to open PR #13 and merge.
 >
-> **Known local-only issue:** `main` has an **unpushed** commit `fb23d94` (the same battery code, landed on `main` by mistake earlier in this session). It is NOT on `origin/main`. If the user pushes `main` before pushing the feature branch, `fb23d94` will conflict with `4b9fe99` (same diff, different SHA). **Recommended fix:** `git checkout main && git reset --hard origin/main && git checkout 13-tufty-battery-fuel-gauge` before pushing.
+> **Hardware verification (PASSED, 2026-11-12):**
+> - **USB power case:** icon renders top-right on all 4 screens (WAITING / LOST / STATS / CLOCK), mode string at x=130 (no overlap), USB bolt visible (3-bar diagonal zigzag, 4x2 bars, 1 px offset each, 2 px down from center) when VBUS on GPIO 24.
+> - **Battery pack case (no USB cable):** full battery icon renders (fill level tracks voltage, color cyan > 20 %), **no bolt** (correct — VBUS not connected), no `[BATT ERROR]` spam.
+> - **No battery case:** icon hidden (outline only), no fill, no bolt.
+> - **Lux sensor:** no visible flicker from the shared GPIO 27 vref assert (2 s refresh rate).
+> - **Serial:** no `[BATT ERROR]` / `[BATT INIT WARN]` / `[LOOP ERROR]` spam in any of the three power states.
 >
-> **Hardware verification status:** NOT YET DONE. The user needs to:
-> 1. Push the branch: `git push -u origin 13-tufty-battery-fuel-gauge`
-> 2. Open PR #13 (draft body in the agent's last message).
-> 3. Upload `tufty/main.py` to the Tufty and verify:
->    - Icon renders top-right on all 4 screens (WAITING / LOST / STATS / CLOCK).
->    - USB bolt visible when plugged in (GPIO 24 = 1).
->    - Icon hidden (outline only) when no battery connected.
->    - If a battery pack is attached: fill level tracks voltage, color switches red at/below 20 %.
->    - No `[BATT ERROR]` spam on serial; no lux-sensor flicker from the shared GPIO 27 vref assert.
-> 4. Merge PR #13, then agent will mark §3.3 as `[x]` in this file and in the plan.
->
-> **If you (the agent) are reading this and the task is still `[~]`:** do NOT re-implement the battery feature. The code is already on the branch. Your job is to (a) help the user push, (b) help the user verify on hardware, (c) flip the `[x]` markers after merge.
+> **If you (the agent) are reading this and the task is `[x]`:** do NOT re-implement the battery feature. The code is verified and on the branch. Your job is to (a) help the user open PR #13, (b) help the user merge, (c) flip the `[x]` markers in the plan after merge and remove this AGENT STATE block.
 
 ## Done
 - [x] #12 — §3.1 + §3.2 + §3.5 + §3.6 (Tufty firmware code quality) — PR #12, hardware-verified on a real Tufty 2040.
