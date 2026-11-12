@@ -251,20 +251,23 @@ def draw_battery_icon(x, y, w, h):
         display.set_pen(fill_pen)
         display.rectangle(x + 2, y + 2, fill_w, h - 4)
 
-    # USB bolt *centered* in the battery body, diagonal zigzag.
-    # 3x3 px bars (two offset, 3 px apart) so it reads as a lightning
-    # bolt, not two merged dots. PEN_P4 has no line/segment primitives,
-    # so we fake the diagonal with two 3x3 rectangles:
-    #   bar 1: (x+w/2-4, y+2)  top-left of center
-    #   bar 2: (x+w/2-1, y+5)  bottom-right of center, 3 px right + 3 px down
-    # The 3 px horizontal offset gives a clearer "inclined" look (was
-    # 2 px, which merged the two bars). Total footprint: 7x8 px.
-    # Vertically: bars span y+2..y+7, centered in the h=12 body (5 px
-    # margin top, 5 px margin bottom → CENTERED). Was y..y+6 (3/7).
+    # USB bolt *centered* in the battery body, 3-bar diagonal zigzag.
+    # Three 2x2 px bars, each offset 1 px right + 1 px down from the
+    # previous, forming a clear "N" / lightning shape. PEN_P4 has no
+    # line/segment primitives, so we fake the diagonal with three
+    # small rectangles:
+    #   bar 1: (x+w/2-3, y+2)  top-left of center
+    #   bar 2: (x+w/2-2, y+3)  middle, 1 px right + 1 px down
+    #   bar 3: (x+w/2-1, y+4)  bottom-right of center, 1 px right + 1 px down
+    # Total footprint: 6x8 px, centered in the 24x12 battery body.
+    # The 3-bar zigzag reads as a lightning bolt, not two dots or a
+    # merged blob (the 2-bar versions at 2 px and 3 px offsets were
+    # still too merged / not inclined enough).
     if usb_detect is not None and usb_detect.value() == 1:
         display.set_pen(GOLD_LCARS)
-        display.rectangle(x + w // 2 - 4, y + 2, 3, 3)
-        display.rectangle(x + w // 2 - 1, y + 5, 3, 3)
+        display.rectangle(x + w // 2 - 3, y + 2, 2, 2)
+        display.rectangle(x + w // 2 - 2, y + 3, 2, 2)
+        display.rectangle(x + w // 2 - 1, y + 4, 2, 2)
 
 
 # ==============================================================================
