@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### ⚡ Changed
+- **Time-sync frame split (protocol, §1.1 of `docs/IMPROVEMENT_PLAN.md`)** — `INIT_TIME` no longer rides on the telemetry line. The host now sends it as a **separate `INIT_TIME:YYYY,MM,DD,HH,MM,SS` line** whenever the 60 s `SYNC_INTERVAL` elapses, independently of telemetry ticks, so a dropped or late metrics frame can no longer delay or suppress a pending sync. The Tufty parser treats `INIT_TIME` as a distinct frame type (line-level dispatch) instead of a key inside the telemetry dict; a sync frame still counts as host liveness for the 5 s COMM FAILURE timer. No user-visible behaviour change: same fields, same 60 s cadence, same RTC drift correction rule (hour/minute diff or ≥ 2 s).
+
 ### ✨ Added
 - **Battery / power indicator (`tufty/main.py`)** — §3.3 of `docs/IMPROVEMENT_PLAN.md`. A small battery icon (top-right corner, 24×12 px) now renders on every screen, showing:
   - **Fill level** from an ADC-29 voltage measurement (vref mux on GPIO 27, shared with the lux sensor — the pin is asserted LOW for ~1 ms per read, then restored, so auto-brightness is unaffected).

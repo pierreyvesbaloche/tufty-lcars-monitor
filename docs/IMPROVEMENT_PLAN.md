@@ -10,6 +10,15 @@
 ## Done
 - [x] #12 — §3.1 + §3.2 + §3.5 + §3.6 (Tufty firmware code quality) — PR #12, hardware-verified on a real Tufty 2040.
 - [x] #13 — §3.3 (Tufty battery / fuel-gauge indicator) — PR #13, merged (origin/main @ `b50ccc8`, post-2026-11-12), hardware-verified on a real Tufty 2040 (USB power case; no battery pack attached during test).
+- [~] #14 — §1.1 (Time-sync frame split) — in progress, see AGENT STATE below.
+
+## AGENT STATE — §1.1 Time-sync frame split (#14, in progress)
+- Status: `[~]` started — implemented locally on branch `14-split-init-time-frame` (commit `eebf14f`): host sends `INIT_TIME` on its own line, Tufty parser treats it as a distinct frame type, README protocol section + CHANGELOG updated. Shadow-tested (telemetry parse, standalone sync dispatch, garbage rejection, legacy mixed-line tolerance). **Branch is LOCAL ONLY — not pushed.**
+- WHAT IS LEFT TO BE DONE (user actions, then the agent does post-merge bookkeeping):
+  1. Push the branch: `git push -u origin 14-split-init-time-frame`.
+  2. Open issue/PR #14 — suggested title: `1.1 — Time-sync: split INIT_TIME into its own serial frame` (body: plan §1.1 acceptance criteria).
+  3. Merge (squash recommended).
+  4. Post-merge: agent updates the Done list + this block.
 
 ## Conventions for turning these into issues
 - Branch: `N-<slug>` (matches existing history, e.g. `12-add-heartbeat-ping`).
