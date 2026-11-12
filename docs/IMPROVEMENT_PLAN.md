@@ -10,7 +10,16 @@
 ## Done
 - [x] #12 — §3.1 + §3.2 + §3.5 + §3.6 (Tufty firmware code quality) — PR #12, hardware-verified on a real Tufty 2040.
 - [x] #13 — §3.3 (Tufty battery / fuel-gauge indicator) — PR #13, merged (origin/main @ `b50ccc8`, post-2026-11-12), hardware-verified on a real Tufty 2040 (USB power case; no battery pack attached during test).
+- [~] #15 — §1.2 (Heartbeat / liveness) — in progress, see AGENT STATE below.
 - [x] #14 — §1.1 (Time-sync frame split) — merged (origin/main @ `5258dfa`, 2026-11-12). `INIT_TIME` is now a standalone `INIT_TIME:YYYY,MM,DD,HH,MM,SS` frame sent on its own line, independently of telemetry; Tufty parser treats it as a distinct frame type (line-level dispatch). No user-visible behaviour change (same fields, same 60 s cadence, same RTC correction rule).
+## AGENT STATE — §1.2 Heartbeat / liveness (#15, in progress)
+- Status: `[~]` started — implemented locally on branch `15-heartbeat-liveness`: host sends `PING:<n>` (monotonic, wraps at 65535) every 2 s on its own line; Tufty parser treats PING as a distinct frame type; COMM FAILURE now keys off `last_activity` = newest of telemetry / INIT_TIME / PING (5 s timeout unchanged); `last_rx_time` keeps its "last telemetry frame" meaning. Shadow-tested (PING dispatch, liveness semantics, legacy mixed-line tolerance). **Branch is LOCAL ONLY — not pushed.**
+- WHAT IS LEFT TO BE DONE (user actions, then the agent does post-merge bookkeeping):
+  1. Push the branch: `git push -u origin 15-heartbeat-liveness`.
+  2. Open issue/PR #15 — suggested title: `1.2 — Heartbeat / liveness: PING frame on the serial line` (body: plan §1.2 acceptance criteria).
+  3. Merge (squash recommended).
+  4. Post-merge: agent updates the Done list + this block.
+
 ## Conventions for turning these into issues
 - Branch: `N-<slug>` (matches existing history, e.g. `12-add-heartbeat-ping`).
 - Commit: Conventional Commits (`feat(scope)`, `fix(scope)`, `refactor(scope)`, `test(scope)`, `docs`, `chore`).
