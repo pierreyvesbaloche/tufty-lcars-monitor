@@ -83,6 +83,7 @@ TELEMETRY = {
     "eth": "N/A",
     "wifi": "N/A",
     "ts": 0.0,
+    "seq": -1,  # 1.3: last accepted frame sequence (-1 = no frame yet)
 }
 
 # ------------------------------------------------------------------------------
@@ -686,6 +687,11 @@ while True:
                                 k_lower = k.lower()
                                 if k_lower in ['eth', 'wifi']:
                                     frame[k_lower] = v
+                                elif k_lower == 'seq':
+                                    try:
+                                        frame[k_lower] = int(v)
+                                    except ValueError:
+                                        pass
                                 else:
                                     try:
                                         frame[k_lower] = float(v)
@@ -693,11 +699,29 @@ while True:
                                         pass
 
                         if frame:
-                            TELEMETRY.update(frame)
-                            data_received = True
-                            has_received_data = True
-                            last_rx_time = time.time()
-                            last_activity = time.time()
+                            # 1.3 — frame-integrity check: SEQ is monotonic
+                            # (wraps at 65536). A gap (dropped frame) or a
+                            # duplicate (retransmission) means the data is
+                            # untrustworthy — drop the frame, keep the
+                            # last-good data. Liveness still counts: the
+                            # host is clearly transmitting.
+                            seq = frame.get("seq")
+                            prev_seq = TELEMETRY["seq"]
+                            if prev_seq >= 0 and (seq is not None) and \
+                                ((seq - prev_seq) % 65536 != 1):
+                                print(f"[STALE FRAME] seq {prev_seq} -> {seq}, dropping telemetry frame")
+                                # 1.2 semantics: the host is transmitting,
+                                # so liveness counts; only the data is
+                                # dropped (last_rx_time keeps 'last
+                                # accepted telemetry frame' meaning).
+                                last_activity = time.time()
+                                frame = {}
+                            if frame:
+                                TELEMETRY.update(frame)
+                                data_received = True
+                                has_received_data = True
+                                last_rx_time = time.time()
+                                last_activity = time.time()
                     except Exception:
                         pass
 
