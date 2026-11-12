@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### ⚡ Changed
+- **Tufty firmware internals (`tufty/main.py`) — refactor for future screens, data model, and button debouncing (hardware-verified on a real Tufty 2040):**
+  - **Screen dispatch centralised** (`draw_current_screen()`): the main loop no longer branches on `current_screen` directly. Adding a screen is now a one-function + one-branch change instead of touching the main loop.
+  - **Typed telemetry model** (`TELEMETRY`): the flat `last_data` dict with mixed `float`/`str` keys is replaced by a single shared object with 10 named fields (`cpu`, `ram_pct`, `ram_u`, `ram_t`, `disk_pct`, `disk_u`, `disk_t`, `eth`, `wifi`, `ts`). The parser writes in-place; draw functions read by field name. No protocol change — same `KEY:VALUE` wire format.
+  - **Button debouncing** (15 ms edge-hold, on top of the Pimoroni `Button` class's own internal filtering): single-frame glitches no longer flip `auto_brightness` or switch screens. Up/Down brightness steps and the AUTO/MAN toggle on Button C are now stable under 100 Hz polling. Field-verified: short real presses get through, glitches are swallowed.
+  - **Startup memory headroom check**: firmware now refuses to enter the main loop if free heap < 8 KB (prints `[CRITICAL ERROR]` and exits). Catches a broken `main.py` upload before it OOMs the device mid-frame. Field-verified: passes on a known-good upload with ~18× margin (154 512 B free at boot).
+  - **No user-visible behaviour change** on existing hardware: same screens, same buttons, same serial protocol, same gauge thresholds (amber ≥ 80 %, red ≥ 90 %), same 5 s COMM FAILURE timeout. STATS / CLOCK / LIGHT / brightness transitions all confirmed on the physical display.
+
+### 📚 Added
+- **`docs/setup_guide.md` — "Watching the Tufty serial log (development)" section**: recommended `screen /dev/ttyACM0 115200` workflow (releases the port cleanly on quit, unlike `cat`), `minicom` / `picocom` / `pyserial` one-shot alternatives, expected clean-boot sequence, and the `[CRITICAL ERROR]` line to avoid. Troubleshooting entries for the new headroom check and the 15 ms debounce.
+
 ---
 
 ## [1.0.0] - 2026-09-08

@@ -33,8 +33,8 @@ try:
 
     # Light sensor (ADC 26 + Power GPIO 27)
     lux_pwr = Pin(27, Pin.OUT)
-    lux_pwr.value(1)          
-    lux_sensor = ADC(26)      
+    lux_pwr.value(1)
+    lux_sensor = ADC(26)
 
     # Tufty 2040 Buttons
     btn_a    = Button(7, invert=False)
@@ -52,14 +52,64 @@ if display is None:
 
 import select
 
-current_screen = 0
+# ------------------------------------------------------------------------------
+# SCREEN TABLE (3.1)
+# ------------------------------------------------------------------------------
+# Logical screen ids. `STATS` is the default landing screen.
+SCREEN_STATS = 0
+SCREEN_CLOCK = 1
+CURRENT_SCREEN = SCREEN_STATS
+
+# ------------------------------------------------------------------------------
+# TELEMETRY DATA MODEL (3.2)
+# ------------------------------------------------------------------------------
+# Replaces the previous flat `last_data` dict. Numeric fields are floats;
+# string fields (eth/wifi) stay as strings. `ts` is the time.time() stamp of
+# the frame the host sent. The Tufty is the only writer to this object; the
+# draw functions only read from it.
+TELEMETRY = {
+    "cpu": 0.0,
+    "ram_pct": 0.0,
+    "ram_u": 0.0,
+    "ram_t": 0.0,
+    "disk_pct": 0.0,
+    "disk_u": 0.0,
+    "disk_t": 0.0,
+    "eth": "N/A",
+    "wifi": "N/A",
+    "ts": 0.0,
+}
+
+# ------------------------------------------------------------------------------
+# SHARED UI STATE (3.1 / 3.6)
+# ------------------------------------------------------------------------------
 auto_brightness = True
 manual_brightness = 0.8
 current_brightness = 0.8
 last_lux_print = 0
-has_received_data = False 
-last_rx_time = 0          
-TIMEOUT_SECONDS = 5       
+has_received_data = False
+last_rx_time = 0
+TIMEOUT_SECONDS = 5
+
+# ------------------------------------------------------------------------------
+# BUTTON DEBOUNCE (3.6)
+# ------------------------------------------------------------------------------
+# 15 ms per-edge debounce: a press has to hold for 15 ms before it is accepted,
+# and a release has to hold for 15 ms before the button is considered free.
+# This kills single-frame glitches (100 Hz main loop → 10 ms per tick) and
+# accidental mode flips, without eating real short presses.
+# (Was 30 ms; reduced after field test showed button presses not registering.)
+DEBOUNCE_MS = 15
+_btn_states = {
+    "a":    {"cur": False, "prev": False, "t": 0},
+    "b":    {"cur": False, "prev": False, "t": 0},
+    "c":    {"cur": False, "prev": False, "t": 0},
+    "up":   {"cur": False, "prev": False, "t": 0},
+    "down": {"cur": False, "prev": False, "t": 0},
+}
+_btn_objects = {
+    "a": btn_a, "b": btn_b, "c": btn_c, "up": btn_up, "down": btn_down,
+}
 
 # ==============================================================================
 # 2. LCARS COLOR PALETTE (PEN_P4)
@@ -104,7 +154,7 @@ def update_backlight():
 
             clamped_adc = max(min_adc, min(max_adc, raw_lux))
             target = 0.50 + ((clamped_adc - min_adc) / (max_adc - min_adc)) * 0.50
-           
+
             current_brightness = current_brightness + (target - current_brightness) * 0.3
 
             now_sec = time.time()
@@ -121,38 +171,66 @@ def update_backlight():
 
     set_hardware_brightness(current_brightness)
 
-def handle_buttons():
-    global current_screen, auto_brightness, manual_brightness
+# ------------------------------------------------------------------------------
+# BUTTON SAMPLING + DEBOUNCING (3.6)
+# ------------------------------------------------------------------------------
+# Poll each physical button, fold the 30 ms debounce, and return a set of
+# *newly-pressed* logical buttons. The main loop calls this once per tick;
+# the returned names are dispatched by `_on_button()`.
+def _sample_buttons():
+    """Poll every physical button, fold the edge-hold debounce, and return
+    the list of names that transitioned to *pressed* this tick.
 
+    The Pimoroni `Button` class already applies its own internal filtering;
+    this layer adds a `DEBOUNCE_MS` edge-hold on top, which is what kills
+    single-frame glitches at the 100 Hz main-loop cadence.
+    """
+    out = []
+    now_ms = time.ticks_ms()
+    for name, obj in _btn_objects.items():
+        st = _btn_states[name]
+        raw = bool(obj.is_pressed)
+        if raw != st["cur"]:
+            if time.ticks_diff(now_ms, st["t"]) >= DEBOUNCE_MS:
+                st["cur"] = raw
+                st["t"] = now_ms
+                if raw:
+                    out.append(name)
+            else:
+                # Edge seen, but not held long enough — restart the timer.
+                st["t"] = now_ms
+        st["prev"] = raw
+    return out
+
+def _on_button(name):
+    """Apply the action for a single debounced press. Returns True if the UI
+    changed as a result (drives the main-loop redraw flag)."""
+    global auto_brightness, manual_brightness, CURRENT_SCREEN
     changed = False
 
-    if btn_a.is_pressed:
-        if current_screen != 0:
-            current_screen = 0
+    if name == "a":
+        if CURRENT_SCREEN != SCREEN_STATS:
+            CURRENT_SCREEN = SCREEN_STATS
             changed = True
             time.sleep(0.15)
-
-    elif btn_b.is_pressed:
-        if current_screen != 1:
-            current_screen = 1
+    elif name == "b":
+        if CURRENT_SCREEN != SCREEN_CLOCK:
+            CURRENT_SCREEN = SCREEN_CLOCK
             changed = True
             time.sleep(0.15)
-
-    elif btn_c.is_pressed:
+    elif name == "c":
         auto_brightness = not auto_brightness
         print(f"[MODE] Switched -> AUTO Mode: {auto_brightness}")
         update_backlight()
         changed = True
         time.sleep(0.2)
-
-    elif btn_up.is_pressed:
+    elif name == "up":
         auto_brightness = False
         manual_brightness = min(1.0, round(manual_brightness + 0.1, 1))
         update_backlight()
         changed = True
         time.sleep(0.15)
-
-    elif btn_down.is_pressed:
+    elif name == "down":
         auto_brightness = False
         manual_brightness = max(0.50, round(manual_brightness - 0.1, 1))
         update_backlight()
@@ -161,12 +239,20 @@ def handle_buttons():
 
     return changed
 
+def handle_buttons():
+    """Sample all buttons, debounce, dispatch. Returns True if any UI changed."""
+    changed = False
+    for name in _sample_buttons():
+        if _on_button(name):
+            changed = True
+    return changed
+
 def sync_rtc(time_str):
     """Synchronizes RP2040 RTC from formatted string 'YYYY,MM,DD,HH,MM,SS'."""
     try:
         parts = [int(p) for p in time_str.split(',')]
         year, month, day, hour, minute, second = parts[0], parts[1], parts[2], parts[3], parts[4], parts[5]
-       
+
         now = rtc.datetime()
         # Adjust only if there is a discrepancy in hour, minute, or >= 2 seconds
         if abs(now[4] - hour) >= 1 or abs(now[5] - minute) >= 1 or abs(now[6] - second) >= 2:
@@ -186,7 +272,7 @@ def get_gauge_color(pct, default_color):
 def draw_horizontal_bar(x, y, w, h, pct, color_fg, color_bg):
     display.set_pen(color_bg)
     display.rectangle(x, y, w, h)
-   
+
     fill_w = int((min(max(pct, 0), 100) / 100.0) * w)
     if fill_w > 0:
         active_color = get_gauge_color(pct, color_fg)
@@ -195,7 +281,7 @@ def draw_horizontal_bar(x, y, w, h, pct, color_fg, color_bg):
 
 def draw_button_labels():
     # Button A (STATS) - x = 55
-    if current_screen == 0:
+    if CURRENT_SCREEN == SCREEN_STATS:
         display.set_pen(GOLD_LCARS)
         display.text("STATS", 55, 228, scale=1)
         display.rectangle(55, 238, 40, 2)
@@ -204,7 +290,7 @@ def draw_button_labels():
         display.text("STATS", 55, 228, scale=1)
 
     # Button B (CLOCK) - x = 145
-    if current_screen == 1:
+    if CURRENT_SCREEN == SCREEN_CLOCK:
         display.set_pen(GOLD_LCARS)
         display.text("CLOCK", 145, 228, scale=1)
         display.rectangle(145, 238, 40, 2)
@@ -294,13 +380,13 @@ def draw_screen_metrics(d):
     # CPU
     display.set_pen(WHITE)
     display.text("CPU UTILIZATION", 20, 10, scale=2)
-    cpu_pct = d.get('cpu', 0)
+    cpu_pct = d["cpu"]
     draw_horizontal_bar(20, 30, 280, 15, cpu_pct, CYAN_MAIN, CYAN_DARK)
     display.set_pen(get_gauge_color(cpu_pct, CYAN_MAIN))
     display.text(f"{int(cpu_pct)}%", 260, 10, scale=2)
 
     # RAM
-    ram_pct, ram_u, ram_t = d.get('ram_pct', 0), d.get('ram_u', 0), d.get('ram_t', 0)
+    ram_pct, ram_u, ram_t = d["ram_pct"], d["ram_u"], d["ram_t"]
     display.set_pen(WHITE)
     display.text("MEMORY", 20, 52, scale=2)
     display.set_pen(GRAY_TEXT)
@@ -310,7 +396,7 @@ def draw_screen_metrics(d):
     draw_horizontal_bar(20, 72, 280, 15, ram_pct, CYAN_MAIN, CYAN_DARK)
 
     # DISK
-    disk_pct, disk_u, disk_t = d.get('disk_pct', 0), d.get('disk_u', 0), d.get('disk_t', 0)
+    disk_pct, disk_u, disk_t = d["disk_pct"], d["disk_u"], d["disk_t"]
     display.set_pen(WHITE)
     display.text("DISK", 20, 95, scale=2)
     display.set_pen(GRAY_TEXT)
@@ -323,8 +409,8 @@ def draw_screen_metrics(d):
     display.set_pen(BLUE_LCARS)
     display.rectangle(20, 142, 280, 3)
     display.set_pen(GRAY_TEXT)
-    display.text(f"ETH:  {d.get('eth', 'N/A')}", 20, 155, scale=2)
-    display.text(f"WIFI: {d.get('wifi', 'N/A')}", 20, 180, scale=2)
+    display.text(f"ETH:  {d['eth']}", 20, 155, scale=2)
+    display.text(f"WIFI: {d['wifi']}", 20, 180, scale=2)
 
     draw_button_labels()
     display.update()
@@ -366,19 +452,37 @@ def draw_screen_clock():
     draw_button_labels()
     display.update()
 
+# ------------------------------------------------------------------------------
+# SCREEN DISPATCH (3.1)
+# ------------------------------------------------------------------------------
+# The main loop used to branch on `current_screen` with an if/else. Centralising
+# it here means adding a screen is: add a draw function + add a branch below.
+# The `TELEMETRY` arg is only passed to screens that need it (the clock screen
+# reads the RTC directly and takes no data argument).
+def draw_current_screen():
+    if CURRENT_SCREEN == SCREEN_CLOCK:
+        draw_screen_clock()
+    else:
+        draw_screen_metrics(TELEMETRY)
+
 # ==============================================================================
 # 5. MAIN LOOP
 # ==============================================================================
 update_backlight()
 
-last_data = {}
-draw_screen_metrics(last_data)
+draw_current_screen()
 
 spoll = select.poll()
 spoll.register(sys.stdin, select.POLLIN)
 
 last_redraw = time.ticks_ms()
 log_debug("Starting main loop.")
+
+# 3.5 — startup headroom check. We want at least 8 KB of free heap before we
+# start the main loop, otherwise a new screen will OOM the device.
+if gc.mem_free() < 8192:
+    print("[CRITICAL ERROR] Insufficient free heap (< 8 KB). Refusing to start main loop.")
+    sys.exit()
 
 while True:
     try:
@@ -392,28 +496,28 @@ while True:
             line = sys.stdin.readline()
             if line:
                 try:
-                    metrics = {}
+                    frame = {}
                     parts = line.strip().split('|')
                     for part in parts:
                         if ':' in part:
                             k, v = part.split(':', 1)
-                           
+
                             # Handle time sync payload
                             if k == "INIT_TIME":
                                 sync_rtc(v)
                                 continue
-                               
+
                             k_lower = k.lower()
                             if k_lower in ['eth', 'wifi']:
-                                metrics[k_lower] = v
+                                frame[k_lower] = v
                             else:
                                 try:
-                                    metrics[k_lower] = float(v)
+                                    frame[k_lower] = float(v)
                                 except ValueError:
                                     pass
-                   
-                    if metrics:
-                        last_data = metrics
+
+                    if frame:
+                        TELEMETRY.update(frame)
                         data_received = True
                         has_received_data = True
                         last_rx_time = time.time()
@@ -422,10 +526,7 @@ while True:
 
         now_ms = time.ticks_ms()
         if btn_changed or data_received or time.ticks_diff(now_ms, last_redraw) >= 1000:
-            if current_screen == 0:
-                draw_screen_metrics(last_data)
-            else:
-                draw_screen_clock()
+            draw_current_screen()
             last_redraw = now_ms
             gc.collect()
 
