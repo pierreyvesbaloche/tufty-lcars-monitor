@@ -31,7 +31,12 @@ try:
     display = PicoGraphics(display=DISPLAY_TUFTY_2040, pen_type=PEN_P4)
     rtc = RTC()
 
-    # Light sensor (ADC 26 + Power GPIO 27)
+    # Light sensor (ADC 26) + shared GPIO 27.
+    # NOTE: GPIO 27 is shared with the battery voltage-reference mux
+    # (see BATTERY section below). `lux_pwr` is the *default* state
+    # (lux enabled); the battery reader briefly asserts the pin LOW
+    # around each VREF read, then restores this value. Do not drive
+    # GPIO 27 to a fixed value from anywhere else in this file.
     lux_pwr = Pin(27, Pin.OUT)
     lux_pwr.value(1)
     lux_sensor = ADC(26)
@@ -129,7 +134,128 @@ GOLD_LCARS  = display.create_pen(240, 180, 40)
 ORANGE_WARN = display.create_pen(255, 120, 0)  # Amber >= 80%
 RED_ALERT   = display.create_pen(255, 30, 30)   # Red >= 90%
 
+# Battery icon colors (3.3). GREEN_BAT reuses the existing CYAN_MAIN pen
+# (no new pen — PEN_P4 is at the 16-color cap); RED_ALERT is reused for
+# the low-battery state.
+GREEN_BAT = CYAN_MAIN
+
 log_debug("Color palette initialized.")
+
+# ==============================================================================
+# 2b. BATTERY / POWER (3.3)
+# ==============================================================================
+# The Tufty 2040 can run off USB, AAA/AA battery pack (JST-PH), or an
+# optional LiPo. Battery voltage is measured on ADC 29 with an onboard
+# voltage-reference mux on GPIO 27 (shared with the lux sensor — see the
+# NOTE in the hardware init block above).
+#
+# IMPORTANT: there is NO Pimoroni `BATTERY` / fuel-gauge class in the
+# Pimoroni MicroPython firmware for the Tufty 2040. The `pimoroni.py`
+# module only ships `Button`, `Analog`, `AnalogMux`, `LED`, `RGBLED`.
+# The official `battery.py` example (micropython/examples/tufty2040/
+# battery.py) implements the measurement inline using raw ADC/Pin.
+# We do the same here, adapted for shared-GPIO-27 and PEN_P4.
+#
+# The icon is *informational only* — it does not drive brightness,
+# alerts, or any other behaviour. If the measurement fails (no battery
+# connected, or the vref mux is busy), the icon simply does not render.
+
+# Battery full/empty reference voltages. Default to the Pimoroni example
+# values for a Galleon 400 mAh LiPo; adjust for your cell if needed.
+BATT_FULL_V = 3.7
+BATT_EMPTY_V = 2.5
+BATT_LOW_PCT = 20          # icon goes red at/below this
+BATT_REFRESH_S = 2.0       # re-measure every 2 s (main-loop gated)
+
+battery_pct = -1           # -1 = "no battery / unknown" (icon hidden)
+last_batt_refresh = 0
+
+# ADC 29 = battery voltage input, ADC 28 = vref divider readout.
+# GPIO 27 = vref enable (shared with lux sensor — see NOTE above).
+# GPIO 24 = USB VBUS detect (1 = USB power connected).
+try:
+    vbat_adc = ADC(29)
+    vref_adc = ADC(28)
+    vref_en  = Pin(27, Pin.OUT)
+    vref_en.value(0)        # start with vref OFF (lux sensor works)
+    usb_detect = Pin(24, Pin.IN)
+except Exception as e:
+    print(f"[BATT INIT WARN] {e} — battery icon disabled")
+    vbat_adc = None
+    vref_adc = None
+    vref_en  = None
+    usb_detect = None
+
+def refresh_battery():
+    """Measure battery voltage and update `battery_pct`. Call at most
+    once per `BATT_REFRESH_S` seconds (main-loop gated).
+
+    Returns the new percentage (0-100) or -1 if no battery is
+    connected / measurement failed. The GPIO 27 vref-enable pin is
+    asserted LOW around the read, then restored to its previous
+    value (1 = lux enabled) so the auto-brightness path keeps working.
+    """
+    global battery_pct
+    if vbat_adc is None:
+        return -1
+    try:
+        # GPIO 27 is shared: capture current value, assert vref (LOW),
+        # read, restore. The lux sensor sees a ~1 ms glitch per
+        # refresh, which is invisible at the 2 s refresh rate.
+        prev = vref_en.value()
+        vref_en.value(0)
+        vdd  = 1.24 * (65535 / vref_adc.read_u16())
+        vbat = (vbat_adc.read_u16() / 65535) * 3 * vdd   # 3 = ADC gain
+        vref_en.value(prev)
+
+        # Heuristic: no battery → vbat reads ~0 V.
+        if vbat < 1.0:
+            battery_pct = -1
+            return -1
+
+        pct = 100 * ((vbat - BATT_EMPTY_V) / (BATT_FULL_V - BATT_EMPTY_V))
+        battery_pct = int(max(0, min(100, pct)))
+        return battery_pct
+    except Exception as e:
+        print(f"[BATT ERROR] {e}")
+        battery_pct = -1
+        return -1
+
+def draw_battery_icon(x, y, w, h):
+    """Draw a small battery outline + fill at (x, y) with size (w, h).
+
+    Pen budget (PEN_P4, 16 pens max — already at cap):
+      outline  -> GRAY_TEXT   (reused)
+      fill     -> CYAN_MAIN   (reused, alias GREEN_BAT) when pct > 20
+      fill     -> RED_ALERT   (reused) when pct <= 20
+      USB bolt -> GOLD_LCARS  (reused, drawn only when USB is connected)
+    No new pens are created; the 16-pen cap is respected.
+    """
+    # Outline (hollow)
+    display.set_pen(GRAY_TEXT)
+    display.rectangle(x, y, w, h)
+    display.set_pen(BLACK)
+    display.rectangle(x + 2, y + 2, w - 4, h - 4)
+    # Nub (the little + terminal on the right)
+    display.set_pen(GRAY_TEXT)
+    display.rectangle(x + w, y + h // 4, 3, h // 2)
+
+    if battery_pct < 0:
+        return                       # no battery -> outline only
+
+    # Fill
+    fill_pen = RED_ALERT if battery_pct <= BATT_LOW_PCT else GREEN_BAT
+    fill_w = int((battery_pct / 100.0) * (w - 4))
+    if fill_w > 0:
+        display.set_pen(fill_pen)
+        display.rectangle(x + 2, y + 2, fill_w, h - 4)
+
+    # USB bolt (top-right of the icon) when USB is connected
+    if usb_detect is not None and usb_detect.value() == 1:
+        display.set_pen(GOLD_LCARS)
+        display.rectangle(x + w - 6, y - 3, 2, 6)
+        display.rectangle(x + w - 8, y - 1, 2, 2)
+
 
 # ==============================================================================
 # 3. UTILITY FUNCTIONS & BRIGHTNESS CONTROL
@@ -307,6 +433,14 @@ def draw_button_labels():
         display.set_pen(GRAY_TEXT)
         display.text("LIGHT", 235, 228, scale=1)
 
+# ------------------------------------------------------------------------------
+# BATTERY ICON PLACEMENT (3.3)
+# ------------------------------------------------------------------------------
+# Top-right corner, just left of the mode string (which starts at x=200).
+# 24x12 px outline; fill width tracks `battery_pct`.
+def draw_battery_icon_on_screen():
+    draw_battery_icon(170, 5, 24, 12)
+
 # ==============================================================================
 # 4. LCARS VIEWS
 # ==============================================================================
@@ -333,6 +467,7 @@ def draw_waiting_screen():
     display.set_pen(GRAY_TEXT)
     display.text("SERIAL ACTIVE", 60, 160, scale=2)
 
+    draw_battery_icon_on_screen()
     draw_button_labels()
     display.update()
 
@@ -359,6 +494,7 @@ def draw_connection_lost_screen():
     display.set_pen(GRAY_TEXT)
     display.text("RETRYING SERIAL...", 60, 160, scale=2)
 
+    draw_battery_icon_on_screen()
     draw_button_labels()
     display.update()
 
@@ -412,6 +548,7 @@ def draw_screen_metrics(d):
     display.text(f"ETH:  {d['eth']}", 20, 155, scale=2)
     display.text(f"WIFI: {d['wifi']}", 20, 180, scale=2)
 
+    draw_battery_icon_on_screen()
     draw_button_labels()
     display.update()
 
@@ -449,6 +586,7 @@ def draw_screen_clock():
     display.set_pen(GRAY_TEXT)
     display.text(stardate_str, 60, 165, scale=2)
 
+    draw_battery_icon_on_screen()
     draw_button_labels()
     display.update()
 
@@ -525,6 +663,15 @@ while True:
                     pass
 
         now_ms = time.ticks_ms()
+
+        # 3.3 — refresh the battery icon at most once per BATT_REFRESH_S.
+        # Gated on `vbat_adc is not None` so a failed init (icon disabled)
+        # costs zero cycles. The GPIO-27 vref assert is a ~1 ms glitch
+        # on the lux sensor, invisible at the 2 s refresh rate.
+        if vbat_adc is not None and time.time() - last_batt_refresh >= BATT_REFRESH_S:
+            last_batt_refresh = time.time()
+            refresh_battery()
+
         if btn_changed or data_received or time.ticks_diff(now_ms, last_redraw) >= 1000:
             draw_current_screen()
             last_redraw = now_ms
