@@ -7,6 +7,34 @@
 ## Status legend
 - `[ ]` planned — `[~]` started — `[x]` done
 
+## ⚠️ AGENT STATE (live)
+> **Last updated:** 2026-11-12 (this session)
+> **Current task:** §3.3 battery / power indicator — **code complete, in push/PR phase**.
+>
+> **Branch:** `13-tufty-battery-fuel-gauge` (local, **NOT pushed**).
+> **Base:** `origin/main` at `6578f28` (merge of PR #12).
+> **Commits on branch (oldest → newest):**
+> 1. `4b9fe99` — `feat(tufty): battery / power indicator (3.3)` — `tufty/main.py` only (148 insertions, 1 deletion).
+> 2. `0829dc9` — `docs: battery indicator — changelog, README, setup guide, plan` — 4 doc files (25 insertions, 2 deletions).
+>
+> **Status:** `[~]` started → **ready for user push + PR**.
+> **Blocking:** user needs to push the branch and open PR #13.
+>
+> **Known local-only issue:** `main` has an **unpushed** commit `fb23d94` (the same battery code, landed on `main` by mistake earlier in this session). It is NOT on `origin/main`. If the user pushes `main` before pushing the feature branch, `fb23d94` will conflict with `4b9fe99` (same diff, different SHA). **Recommended fix:** `git checkout main && git reset --hard origin/main && git checkout 13-tufty-battery-fuel-gauge` before pushing.
+>
+> **Hardware verification status:** NOT YET DONE. The user needs to:
+> 1. Push the branch: `git push -u origin 13-tufty-battery-fuel-gauge`
+> 2. Open PR #13 (draft body in the agent's last message).
+> 3. Upload `tufty/main.py` to the Tufty and verify:
+>    - Icon renders top-right on all 4 screens (WAITING / LOST / STATS / CLOCK).
+>    - USB bolt visible when plugged in (GPIO 24 = 1).
+>    - Icon hidden (outline only) when no battery connected.
+>    - If a battery pack is attached: fill level tracks voltage, color switches red at/below 20 %.
+>    - No `[BATT ERROR]` spam on serial; no lux-sensor flicker from the shared GPIO 27 vref assert.
+> 4. Merge PR #13, then agent will mark §3.3 as `[x]` in this file and in the plan.
+>
+> **If you (the agent) are reading this and the task is still `[~]`:** do NOT re-implement the battery feature. The code is already on the branch. Your job is to (a) help the user push, (b) help the user verify on hardware, (c) flip the `[x]` markers after merge.
+
 ## Done
 - [x] #12 — §3.1 + §3.2 + §3.5 + §3.6 (Tufty firmware code quality) — PR #12, hardware-verified on a real Tufty 2040.
 - [x] #13 — §3.3 (Tufty battery / fuel-gauge indicator) — PR #13, hardware-verified on a real Tufty 2040 (USB power case; no battery pack attached during test).
