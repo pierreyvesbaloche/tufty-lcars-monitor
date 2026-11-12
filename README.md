@@ -11,6 +11,7 @@ A **Star Trek LCARS** style system monitoring tool for Raspberry Pi using a **Pi
 - **Auto Brightness:** Ambient light adjustment using the built-in phototransistor (with a safe floor at 50%).
 - **Clock Mode:** Switchable via Button B (RTC Clock + Stardate display).
 - **Background Service:** Includes Systemd integration to launch automatically at host boot.
+- **Defensive Firmware Safeguards:** Button input debouncing (30 ms edge-hold, kills single-frame glitches) and a startup memory headroom check (refuses to boot if free heap < 8 KB).
 
 ---
 
