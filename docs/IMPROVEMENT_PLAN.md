@@ -9,6 +9,7 @@
 
 ## Done
 - [x] #12 — §3.1 + §3.2 + §3.5 + §3.6 (Tufty firmware code quality) — PR #12, hardware-verified on a real Tufty 2040.
+- [x] #13 — §3.3 (Tufty battery / fuel-gauge indicator) — PR #13, hardware-verified on a real Tufty 2040 (USB power case; no battery pack attached during test).
 
 ## Conventions for turning these into issues
 - Branch: `N-<slug>` (matches existing history, e.g. `12-add-heartbeat-ping`).
@@ -152,7 +153,7 @@
 - **Acceptance:**
   - Renderers read fields by name, no `d.get('cpu', 0)` sprinkled around.
 
-### 3.3 — Battery / power
+### 3.3 — Battery / power [x] #13
 - **Why:** The Tufty 2040 can be powered from USB or an optional LiPo; right now the code assumes USB.
 - **Files:** `tufty/main.py` (+ a `BATTERY` metric on the host if/when relevant).
 - **Plan:**

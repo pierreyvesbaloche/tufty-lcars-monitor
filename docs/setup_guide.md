@@ -49,6 +49,15 @@ Buttons use a 15 ms edge-hold debounce on top of the Pimoroni `Button` class's o
 2. Open the serial log (see [Watching the Tufty serial log](#-watching-the-tufty-serial-log-development)) and press the button. You should see a `[RAW-PRESS] <name> is_pressed=True` line. If you see it but no screen change, the debounce is eating the press — report it with the log.
 3. If you see **no** `[RAW-PRESS]` line while holding the button, the GPIO is not transitioning — re-seat the Tufty 2040 on its base (a loose connector can cause a stuck state), and confirm the `pimoroni` library version matches the firmware (re-flash per `tufty/README.md`).
 
+### Battery icon missing, stuck at 0 %, or wrong percentage
+
+The battery icon (top-right) reads an ADC-29 voltage with the onboard vref mux on GPIO 27. If it's not showing what you expect:
+
+1. **No icon at all (outline only)** — the firmware thinks no battery is connected (`vbat < 1.0 V`). Check the JST-PH connector on the back of the Tufty; a loose contact reads as 0 V.
+2. **Stuck at 0 %** — the battery is below `BATT_EMPTY_V` (default 2.5 V). Either the cell is genuinely dead, or the default `BATT_EMPTY_V` / `BATT_FULL_V` don't match your cell. The Tufty 2040 supports AAA/AA packs (3× AAA recommended) and optional LiPo; the defaults (3.7 V / 2.5 V) are for a Galleon 400 mAh LiPo per the Pimoroni example. Adjust `BATT_FULL_V` / `BATT_EMPTY_V` at the top of `tufty/main.py` for your cell.
+3. **Jumps / flickers** — the vref mux on GPIO 27 is shared with the lux sensor; the firmware asserts it LOW for ~1 ms per read (every 2 s) and restores it. If you see flicker, lower `BATT_REFRESH_S` is the wrong fix — check that nothing else in `main.py` is driving GPIO 27 to a fixed value (search for `Pin(27`). The lux-sensor init and the battery reader are the only two places that touch it.
+4. **USB bolt not showing when plugged in** — the bolt is driven by GPIO 24 (VBUS detect). Some USB hubs/cables don't expose VBUS cleanly; try a different cable or a direct connection to the Pi/laptop.
+
 ### "COMM FAILURE" screen after 5 s
 
 The Tufty shows the red `COMM FAILURE / COMPUTER OFFLINE` screen when no telemetry frame arrives for 5 s. Causes, in order of likelihood:

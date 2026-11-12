@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### ✨ Added
+- **Battery / power indicator (`tufty/main.py`)** — §3.3 of `docs/IMPROVEMENT_PLAN.md`. A small battery icon (top-right corner, 24×12 px) now renders on every screen, showing:
+  - **Fill level** from an ADC-29 voltage measurement (vref mux on GPIO 27, shared with the lux sensor — the pin is asserted LOW for ~1 ms per read, then restored, so auto-brightness is unaffected).
+  - **Color**: cyan (reuses `CYAN_MAIN`) above 20 %, red (reuses `RED_ALERT`) at/below 20 %.
+  - **USB bolt** (gold, reuses `GOLD_LCARS`) when VBUS is detected on GPIO 24.
+  - **Hidden** when no battery is connected (vbat < 1.0 V) or the measurement fails — the icon degrades to outline-only, no error spam.
+  - **Refresh**: every 2 s, gated by `vbat_adc is not None` so a failed init costs zero cycles.
+  - **No new pens**: the PEN_P4 16-color cap is already at 12/12 used; the icon reuses `GRAY_TEXT` / `BLACK` / `CYAN_MAIN` / `RED_ALERT` / `GOLD_LCARS`. Palette budget unchanged.
+  - **No protocol change, no new serial output** — the icon is purely local to the Tufty.
+  - **Tunable**: `BATT_FULL_V` (default 3.7 V, Galleon 400 mAh LiPo), `BATT_EMPTY_V` (default 2.5 V), `BATT_LOW_PCT` (default 20), `BATT_REFRESH_S` (default 2.0) are module-level constants — adjust for your cell if needed.
+  - **Caveat (documented in code)**: there is **no** Pimoroni `BATTERY` / fuel-gauge class in the Pimoroni MicroPython firmware for the Tufty 2040 — the `pimoroni.py` module only ships `Button` / `Analog` / `AnalogMux` / `LED` / `RGBLED`. The measurement is implemented inline (same approach as the official `micropython/examples/tufty2040/battery.py`), adapted for the shared GPIO 27 and the PEN_P4 palette.
+
 ### ⚡ Changed
 - **Tufty firmware internals (`tufty/main.py`) — refactor for future screens, data model, and button debouncing (hardware-verified on a real Tufty 2040):**
   - **Screen dispatch centralised** (`draw_current_screen()`): the main loop no longer branches on `current_screen` directly. Adding a screen is now a one-function + one-branch change instead of touching the main loop.
