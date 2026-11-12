@@ -12,6 +12,15 @@
 - [x] #13 — §3.3 (Tufty battery / fuel-gauge indicator) — PR #13, merged (origin/main @ `b50ccc8`, post-2026-11-12), hardware-verified on a real Tufty 2040 (USB power case; no battery pack attached during test).
 - [x] #14 — §1.1 (Time-sync frame split) — merged (origin/main @ `5258dfa`, 2026-11-12). `INIT_TIME` is now a standalone `INIT_TIME:YYYY,MM,DD,HH,MM,SS` frame sent on its own line, independently of telemetry; Tufty parser treats it as a distinct frame type (line-level dispatch). No user-visible behaviour change (same fields, same 60 s cadence, same RTC correction rule).
 - [x] #15 — §1.2 (Heartbeat / liveness) — merged (origin/main @ `af633a0`, 2026-11-12). `PING:<n>` (monotonic, wraps at 65535) is sent every 2 s on its own line, independently of telemetry and time sync; the Tufty treats it as a distinct frame type and keys the 5 s COMM FAILURE view off `last_activity` = newest of telemetry / sync / heartbeat. No user-visible behaviour change on a healthy host (same screens, same thresholds, same timeout).
+- [~] #16 — §1.3 (Frame integrity: SEQ) — in progress, see AGENT STATE below.
+## AGENT STATE — §1.3 Frame integrity: SEQ (#16, in progress)
+- Status: `[~]` started — implemented locally on branch `16-frame-seq-integrity` (commit `74f6bc8`): the SEQ option from the plan (lighter than CRC). Host appends `|SEQ:<n>` (monotonic, wraps at 65536) to every telemetry frame; Tufty parser reads `seq` as an int field and rejects a frame when the distance from the last accepted seq is not exactly 1 (gap = dropped frame, duplicate = retransmission): frame dropped, last-good data kept, `[STALE FRAME] seq a -> b` logged, liveness still counts (1.2). First frame (prev seq -1) and legacy frames without SEQ parse as before — no hard dependency. Shadow-tested incl. wraparound (65535 -> 0 accept, 0 -> 2 reject). **Branch is LOCAL ONLY — not pushed.**
+- WHAT IS LEFT TO BE DONE (user actions, then the agent does post-merge bookkeeping):
+  1. Push the branch: `git push -u origin 16-frame-seq-integrity`.
+  2. Open issue/PR #16 — suggested title: `1.3 — Frame integrity: telemetry SEQ counter (gap/duplicate rejection)` (body: plan §1.3 acceptance criteria).
+  3. Merge (squash recommended).
+  4. Post-merge: agent updates the Done list + this block.
+
 ## Conventions for turning these into issues
 - Branch: `N-<slug>` (matches existing history, e.g. `12-add-heartbeat-ping`).
 - Commit: Conventional Commits (`feat(scope)`, `fix(scope)`, `refactor(scope)`, `test(scope)`, `docs`, `chore`).
