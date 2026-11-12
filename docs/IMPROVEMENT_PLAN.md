@@ -7,52 +7,9 @@
 ## Status legend
 - `[ ]` planned — `[~]` started — `[x]` done
 
-## ⚠️ AGENT STATE (live)
-> **Last updated:** 2026-11-12 (this session, PR creation blocked)
-> **Current task:** §3.3 battery / power indicator — **hardware-verified, PR creation blocked**.
->
-> **Branch:** `13-tufty-battery-fuel-gauge` (LOCAL ONLY — NOT PUSHED to origin).
-> **Base:** `origin/main` at `6578f28` (merge of PR #12).
-> **Commits on branch (oldest → newest, 13 total):**
-> 1. `4b9fe99` — `feat(tufty): battery / power indicator (3.3)` — `tufty/main.py` only.
-> 2. `0829dc9` — `docs: battery indicator — changelog, README, setup guide, plan` — 4 doc files.
-> 3. `189fc21` — `docs(plan): add AGENT STATE block for §3.3 (in-progress tracking)`.
-> 4. `8912108` — `fix(tufty): battery icon position + USB bolt visibility (field feedback)` — round 1.
-> 5. `a3e32e2` — `fix(tufty): battery icon — bolt inside body, align with AUTO/MAN text` — round 2.
-> 6. `d572355` — `fix(tufty): battery icon — mode string left, bolt bigger, icon rightmost` — round 3.
-> 7. `bc727b2` — `fix(tufty): USB bolt — diagonal zigzag (2x2 bars, 1 px apart)` — round 4.
-> 8. `2cd5396` — `fix(tufty): USB bolt — centered, 3x3 bars (bigger, diagonal)` — round 5.
-> 9. `c1683a2` — `fix(tufty): USB bolt — vertically centered, 4x4 bars (bigger)` — round 6.
-> 10. `7924a86` — `fix(tufty): USB bolt — vertically centered, 3 px offset (stretched)` — round 7.
-> 11. `260acb6` — `fix(tufty): USB bolt — 3-bar zigzag (2x2 bars, 1 px offset each)` — round 8.
-> 12. `db5aee2` — `fix(tufty): USB bolt — 4x2 bars, moved 2 px down` — round 9, **final**.
-> 13. `29593ce` — `docs(plan): mark §3.3 hardware-verified (USB + battery pack cases)`.
->
-> **Status:** `[~]` started → **hardware-verified, BLOCKED on push**.
-> **Blocking:** Agent cannot push (no `gh` auth in sandbox, `git push` prompts for username). User needs to push the branch from their terminal.
->
-> **Hardware verification (PASSED, 2026-11-12):**
-> - **USB power case:** icon renders top-right on all 4 screens (WAITING / LOST / STATS / CLOCK), mode string at x=130 (no overlap), USB bolt visible (3-bar diagonal zigzag, 4x2 bars, 1 px offset each, 2 px down from center) when VBUS on GPIO 24.
-> - **Battery pack case (no USB cable):** full battery icon renders (fill level tracks voltage, color cyan > 20 %), **no bolt** (correct — VBUS not connected), no `[BATT ERROR]` spam.
-> - **No battery case:** icon hidden (outline only), no fill, no bolt.
-> - **Lux sensor:** no visible flicker from the shared GPIO 27 vref assert (2 s refresh rate).
-> - **Serial:** no `[BATT ERROR]` / `[BATT INIT WARN]` / `[LOOP ERROR]` spam in any of the three power states.
->
-> **WHAT IS LEFT TO BE DONE (user actions, in order):**
-> 1. **Push the branch** from your terminal:
->    ```bash
->    cd /home/pi/Dev/ws_tufty-lcars-monitor_gh
->    git push -u origin 13-tufty-battery-fuel-gauge
->    ```
-> 2. **Open PR #13** (title + body provided by the agent in the conversation, or use the web UI at `https://github.com/pierreyvesbaloche/tufty-lcars-monitor/compare/main...13-tufty-battery-fuel-gauge` after the push).
-> 3. **Merge PR #13** (squash recommended — the 9 field-fix rounds are iterative noise).
-> 4. **Post-merge bookkeeping** (agent will handle): flip §3.3 from `[x] #13` to `[x] #13 (merged)`, remove this AGENT STATE block, update the "Done" section with the merge date.
->
-> **If you (the agent) are reading this and the task is `[~]`:** do NOT re-implement the battery feature. The code is verified and on the local branch. Your job is to (a) help the user push the branch, (b) help the user open PR #13, (c) help the user merge, (d) flip the `[x]` markers in the plan after merge and remove this AGENT STATE block.
-
 ## Done
 - [x] #12 — §3.1 + §3.2 + §3.5 + §3.6 (Tufty firmware code quality) — PR #12, hardware-verified on a real Tufty 2040.
-- [x] #13 — §3.3 (Tufty battery / fuel-gauge indicator) — PR #13, hardware-verified on a real Tufty 2040 (USB power case; no battery pack attached during test).
+- [x] #13 — §3.3 (Tufty battery / fuel-gauge indicator) — PR #13, merged (origin/main @ `b50ccc8`, post-2026-11-12), hardware-verified on a real Tufty 2040 (USB power case; no battery pack attached during test).
 
 ## Conventions for turning these into issues
 - Branch: `N-<slug>` (matches existing history, e.g. `12-add-heartbeat-ping`).
@@ -196,7 +153,7 @@
 - **Acceptance:**
   - Renderers read fields by name, no `d.get('cpu', 0)` sprinkled around.
 
-### 3.3 — Battery / power [x] #13
+### 3.3 — Battery / power [x] #13 (merged)
 - **Why:** The Tufty 2040 can be powered from USB or an optional LiPo; right now the code assumes USB.
 - **Files:** `tufty/main.py` (+ a `BATTERY` metric on the host if/when relevant).
 - **Plan:**

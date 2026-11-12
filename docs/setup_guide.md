@@ -5,10 +5,17 @@
 To ensure the monitoring sender runs continuously in the background and starts automatically whenever your host boots up, a **Systemd service** is used.
 
 ### Default Installation
-The automated script (`host/setup_env.sh`) installs the service automatically. If you ran `./setup_env.sh`, the service is already registered and active.
+`host/setup_env.sh` only creates `.venv/` and installs the Python dependencies — it does **not** register the service. After running it, install the unit from the repository root:
+```bash
+sudo cp host/tufty-monitor.service /etc/systemd/system/tufty-monitor.service
+sudo systemctl daemon-reload
+sudo systemctl enable --now tufty-monitor
+systemctl status tufty-monitor
+```
+The unit's default paths point at `/home/pi/tufty-lcars-monitor`; if your checkout lives elsewhere, edit the `WorkingDirectory` / `ExecStart` lines first (and/or keep a custom unit, see below).
 
 ### Custom Project Paths
-If your project repository is located outside the standard `/home/pi/tufty-lcars-monitor` directory, update the paths inside `host/tufty-monitor.service` before running the setup script:
+If your project repository is located outside the standard `/home/pi/tufty-lcars-monitor` directory, update the paths inside `host/tufty-monitor.service` before installing the unit:
 
 ```ini
 [Unit]
@@ -24,7 +31,8 @@ Restart=always
 RestartSec=5
 
 [Install]
-WantedBy=multi-user.target```
+WantedBy=multi-user.target
+```
 
 ## 🩺 Troubleshooting
 
