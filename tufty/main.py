@@ -251,17 +251,18 @@ def draw_battery_icon(x, y, w, h):
         display.set_pen(fill_pen)
         display.rectangle(x + 2, y + 2, fill_w, h - 4)
 
-    # USB bolt *inside* the battery body, top-right of the fill area.
-    # 3x5 px *diagonal* zigzag (two offset bars, 1 px apart) so it reads
-    # as a lightning bolt, not a square. PEN_P4 has no line/segment
-    # primitives, so we fake the diagonal with two 2x2 rectangles:
-    #   bar 1: (x+w-8, y+1)  top-left
-    #   bar 2: (x+w-6, y+3)  bottom-right, 1 px right + 2 px down
-    # The 1 px horizontal offset between them gives the "inclined" look.
+    # USB bolt *centered* in the battery body, diagonal zigzag.
+    # 3x3 px bars (two offset, 1 px apart) so it reads as a lightning
+    # bolt, not two little dots. PEN_P4 has no line/segment primitives,
+    # so we fake the diagonal with two 3x3 rectangles:
+    #   bar 1: (x+w/2-3, y+1)  top-left of center
+    #   bar 2: (x+w/2-1, y+3)  bottom-right of center, 2 px right + 2 px down
+    # The 2 px horizontal offset gives the "inclined" look. Total
+    # footprint: 6x5 px, centered in the battery body (was 4x4 top-right).
     if usb_detect is not None and usb_detect.value() == 1:
         display.set_pen(GOLD_LCARS)
-        display.rectangle(x + w - 8, y + 1, 2, 2)
-        display.rectangle(x + w - 6, y + 3, 2, 2)
+        display.rectangle(x + w // 2 - 3, y + 1, 3, 3)
+        display.rectangle(x + w // 2 - 1, y + 3, 3, 3)
 
 
 # ==============================================================================
