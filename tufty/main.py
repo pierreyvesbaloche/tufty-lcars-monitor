@@ -252,11 +252,12 @@ def draw_battery_icon(x, y, w, h):
         display.rectangle(x + 2, y + 2, fill_w, h - 4)
 
     # USB bolt *inside* the battery body, top-right of the fill area.
-    # 2x4 px (two vertical bars) — visible at PEN_P4 4-bit depth.
+    # 3x5 px (two vertical bars, 1 px gap) — visible as a lightning bolt
+    # at PEN_P4 4-bit depth. The previous 2x4 read as a square.
     if usb_detect is not None and usb_detect.value() == 1:
         display.set_pen(GOLD_LCARS)
-        display.rectangle(x + w - 7, y + 2, 2, 4)
-        display.rectangle(x + w - 5, y + 2, 2, 4)
+        display.rectangle(x + w - 8, y + 2, 2, 5)
+        display.rectangle(x + w - 5, y + 2, 2, 5)
 
 
 # ==============================================================================
@@ -452,15 +453,17 @@ def draw_battery_icon_on_screen():
 def draw_waiting_screen():
     clear_screen()
 
-    display.set_pen(ORANGE_AUTO if auto_brightness else GRAY_TEXT)
-    mode_str = f"AUTO {int(current_brightness*100)}%" if auto_brightness else f"MAN {int(current_brightness*100)}%"
-    display.text(mode_str, 200, 5, scale=1)
-
     display.set_pen(GOLD_LCARS)
     display.rectangle(15, 15, 30, 200)
     display.set_pen(BLACK)
     display.rectangle(15, 65, 30, 10)
     display.rectangle(15, 140, 30, 10)
+
+    # Mode string moved left to x=130 to make room for the battery icon
+    # in the top-right corner (x=210..237). Same reason as CLOCK/LOST/STATS.
+    display.set_pen(ORANGE_AUTO if auto_brightness else GRAY_TEXT)
+    mode_str = f"AUTO {int(current_brightness*100)}%" if auto_brightness else f"MAN {int(current_brightness*100)}%"
+    display.text(mode_str, 130, 5, scale=1)
 
     display.set_pen(ORANGE_WARN)
     display.text("SYSTEM STANDBY", 60, 30, scale=3)
@@ -479,15 +482,16 @@ def draw_waiting_screen():
 def draw_connection_lost_screen():
     clear_screen()
 
-    display.set_pen(ORANGE_AUTO if auto_brightness else GRAY_TEXT)
-    mode_str = f"AUTO {int(current_brightness*100)}%" if auto_brightness else f"MAN {int(current_brightness*100)}%"
-    display.text(mode_str, 200, 5, scale=1)
-
     display.set_pen(RED_ALERT)
     display.rectangle(15, 15, 30, 200)
     display.set_pen(BLACK)
     display.rectangle(15, 65, 30, 10)
     display.rectangle(15, 140, 30, 10)
+
+    # Mode string moved left to x=130 (same reason as WAITING/CLOCK/STATS).
+    display.set_pen(ORANGE_AUTO if auto_brightness else GRAY_TEXT)
+    mode_str = f"AUTO {int(current_brightness*100)}%" if auto_brightness else f"MAN {int(current_brightness*100)}%"
+    display.text(mode_str, 130, 5, scale=1)
 
     display.set_pen(RED_ALERT)
     display.text("COMM FAILURE", 60, 30, scale=3)
@@ -514,9 +518,13 @@ def draw_screen_metrics(d):
 
     clear_screen()
 
+    # Move the mode string left on the STATS screen only, to make room
+    # for the battery icon in the top-right corner (same reason as CLOCK).
+    # The CPU bar starts at x=20, y=30 — no collision with the mode
+    # string at y=5.
     display.set_pen(ORANGE_AUTO if auto_brightness else GRAY_TEXT)
     mode_str = f"AUTO {int(current_brightness*100)}%" if auto_brightness else f"MAN {int(current_brightness*100)}%"
-    display.text(mode_str, 200, 5, scale=1)
+    display.text(mode_str, 130, 5, scale=1)
 
     # CPU
     display.set_pen(WHITE)
@@ -560,15 +568,17 @@ def draw_screen_metrics(d):
 def draw_screen_clock():
     clear_screen()
 
-    display.set_pen(ORANGE_AUTO if auto_brightness else GRAY_TEXT)
-    mode_str = f"AUTO {int(current_brightness*100)}%" if auto_brightness else f"MAN {int(current_brightness*100)}%"
-    display.text(mode_str, 200, 5, scale=1)
-
     display.set_pen(GOLD_LCARS)
     display.rectangle(15, 15, 30, 200)
     display.set_pen(BLACK)
     display.rectangle(15, 55, 30, 8)
     display.rectangle(15, 145, 30, 8)
+
+    # Mode string moved left to x=130 to make room for the battery icon
+    # in the top-right corner (x=210..237). Same reason as WAITING/LOST/STATS.
+    display.set_pen(ORANGE_AUTO if auto_brightness else GRAY_TEXT)
+    mode_str = f"AUTO {int(current_brightness*100)}%" if auto_brightness else f"MAN {int(current_brightness*100)}%"
+    display.text(mode_str, 130, 5, scale=1)
 
     # DIRECT READ FROM HARDWARE RTC (RP2040)
     now = rtc.datetime()
