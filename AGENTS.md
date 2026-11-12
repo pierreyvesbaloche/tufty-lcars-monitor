@@ -2,6 +2,9 @@
 
 Guidance for AI coding agents working in this repository.
 
+## General rules (apply to every task)
+- **No code in chat or thinking — general rule:** never paste file contents, diffs, or code snippets into the user-facing reply or extended thinking, and do not walk through the underlying reasoning. Report actions briefly in plain language (what was changed, where, why) and keep momentum — no ceremony, no recap of the previous state.
+
 ## Project overview
 Star Trek **LCARS**-styled system monitor for the Pimoroni **Tufty 2040** (RP2040). A Python host script (`host/sender.py`) streams CPU/RAM/disk/IP metrics + time over **USB serial** to a MicroPython program (`tufty/main.py`) that renders an LCARS dashboard.
 
@@ -22,9 +25,6 @@ assets/ 01.png..05.png    # project photos/screenshots
 models/ *_v1.stl          # 3D-printed case (left/right)
 README.md, CHANGELOG.md, LICENSE, AGENTS.md
 ```
-
-## Agent output rules
-- **No code in chat or thinking:** never paste file contents, diffs, or code snippets into the user-facing reply or extended thinking. Report actions briefly and in plain language (what was changed, where, and why) without showing the underlying code or reasoning steps.
 
 ## Critical constraints (easy to get wrong)
 
