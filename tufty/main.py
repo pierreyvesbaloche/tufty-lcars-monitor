@@ -94,10 +94,12 @@ TIMEOUT_SECONDS = 5
 # ------------------------------------------------------------------------------
 # BUTTON DEBOUNCE (3.6)
 # ------------------------------------------------------------------------------
-# 30 ms per-edge debounce: a press has to hold for 30 ms before it is accepted,
-# and a release has to hold for 30 ms before the button is considered free.
-# This kills single-frame glitches and accidental mode flips.
-DEBOUNCE_MS = 30
+# 15 ms per-edge debounce: a press has to hold for 15 ms before it is accepted,
+# and a release has to hold for 15 ms before the button is considered free.
+# This kills single-frame glitches (100 Hz main loop → 10 ms per tick) and
+# accidental mode flips, without eating real short presses.
+# (Was 30 ms; reduced after field test showed button presses not registering.)
+DEBOUNCE_MS = 15
 _btn_states = {
     "a":    {"cur": False, "prev": False, "t": 0},
     "b":    {"cur": False, "prev": False, "t": 0},
@@ -175,7 +177,13 @@ def update_backlight():
 # Poll each physical button, fold the 30 ms debounce, and return a set of
 # *newly-pressed* logical buttons. The main loop calls this once per tick;
 # the returned names are dispatched by `_on_button()`.
+# One-shot diagnostic: log the raw `is_pressed` state of every button at
+# boot so a stuck-high / stuck-low GPIO is visible in the serial log.
+# Remove after the field-test issue is resolved.
+_BTN_DIAGNOSTIC_DONE = False
+
 def _sample_buttons():
+    global _BTN_DIAGNOSTIC_DONE
     out = []
     now_ms = time.ticks_ms()
     for name, obj in _btn_objects.items():
@@ -191,6 +199,10 @@ def _sample_buttons():
                 # Edge seen, but not held long enough — restart the timer.
                 st["t"] = now_ms
         st["prev"] = raw
+    if not _BTN_DIAGNOSTIC_DONE:
+        _BTN_DIAGNOSTIC_DONE = True
+        states = {n: bool(o.is_pressed) for n, o in _btn_objects.items()}
+        print(f"[BTN-DIAG] raw is_pressed at boot: {states}")
     return out
 
 def _on_button(name):
