@@ -74,6 +74,10 @@ Frames are sent as UTF-8 single-line strings delimited by pipes (`|`) and termin
   ```text
   INIT_TIME:2026,11,12,19,45,00
   ```
+- **Heartbeat Payload:** sent as its **own line**, `PING:<n>`, every 2 s (`PING_INTERVAL`), independently of telemetry and time sync. `<n>` is a monotonically increasing counter (wraps at 65535). No response is expected — the host is one-way. The Tufty uses it for liveness: the COMM FAILURE view only appears when **no** telemetry, sync, or heartbeat frame has arrived for 5 s.
+  ```text
+  PING:12
+  ```
 
 ---
 

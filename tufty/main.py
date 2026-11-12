@@ -94,6 +94,7 @@ current_brightness = 0.8
 last_lux_print = 0
 has_received_data = False
 last_rx_time = 0
+last_activity = 0  # 1.2: newest of telemetry / INIT_TIME / PING — drives COMM FAILURE
 TIMEOUT_SECONDS = 5
 
 # ------------------------------------------------------------------------------
@@ -523,7 +524,7 @@ def draw_screen_metrics(d):
         draw_waiting_screen()
         return
 
-    if time.time() - last_rx_time > TIMEOUT_SECONDS:
+    if time.time() - last_activity > TIMEOUT_SECONDS:
         draw_connection_lost_screen()
         return
 
@@ -660,15 +661,20 @@ while True:
             line = sys.stdin.readline()
             if line:
                 line = line.strip()
-                # 1.1 — INIT_TIME is now a standalone frame type, no longer
-                # a key inside the telemetry dict. It still counts as host
-                # liveness: update last_rx_time so the 5 s COMM FAILURE
-                # timer only fires when neither telemetry nor sync frames
-                # arrive.
-                if line.startswith("INIT_TIME:"):
+                # 1.2 — liveness model: last_rx_time stays "last telemetry
+                # frame"; last_activity is the newest of telemetry / sync /
+                # heartbeat and drives the 5 s COMM FAILURE timer.
+                # PING:<n> is a standalone frame type (one-way host, no PONG).
+                if line.startswith("PING:"):
+                    has_received_data = True
+                    last_rx_time = time.time()
+                    last_activity = time.time()
+                elif line.startswith("INIT_TIME:"):
+                    # 1.1 — sync is its own frame type; still liveness.
                     sync_rtc(line[len("INIT_TIME:"):])
                     has_received_data = True
                     last_rx_time = time.time()
+                    last_activity = time.time()
                 else:
                     try:
                         frame = {}
@@ -691,6 +697,7 @@ while True:
                             data_received = True
                             has_received_data = True
                             last_rx_time = time.time()
+                            last_activity = time.time()
                     except Exception:
                         pass
 
