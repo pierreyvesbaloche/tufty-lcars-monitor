@@ -250,11 +250,12 @@ def draw_battery_icon(x, y, w, h):
         display.set_pen(fill_pen)
         display.rectangle(x + 2, y + 2, fill_w, h - 4)
 
-    # USB bolt (top-right of the icon) when USB is connected
+    # USB bolt (above the icon) when USB is connected. 2x4 px so it's
+    # actually visible — the previous 2x6 was a single dot at 4-bit depth.
     if usb_detect is not None and usb_detect.value() == 1:
         display.set_pen(GOLD_LCARS)
-        display.rectangle(x + w - 6, y - 3, 2, 6)
-        display.rectangle(x + w - 8, y - 1, 2, 2)
+        display.rectangle(x + w - 8, y - 7, 2, 4)
+        display.rectangle(x + w - 6, y - 5, 2, 4)
 
 
 # ==============================================================================
@@ -436,10 +437,15 @@ def draw_button_labels():
 # ------------------------------------------------------------------------------
 # BATTERY ICON PLACEMENT (3.3)
 # ------------------------------------------------------------------------------
-# Top-right corner, just left of the mode string (which starts at x=200).
-# 24x12 px outline; fill width tracks `battery_pct`.
+# Top-right corner, clear of the mode string ("AUTO 80%" / "MAN 80%"
+# starts at x=200, y=5, scale=1, ~70 px wide). The icon sits at
+# x=245, y=8 — 24x12 px outline, 3 px gap from the right edge (240 px
+# screen), 8 px from the top edge. USB bolt draws at y-7 = y=1 (on-
+# screen, top row) so it's visible. If the mode string ever grows
+# past x=245, the icon will overlap — not expected with the current
+# "AUTO 100%" / "MAN 100%" max-width strings.
 def draw_battery_icon_on_screen():
-    draw_battery_icon(170, 5, 24, 12)
+    draw_battery_icon(245, 8, 24, 12)
 
 # ==============================================================================
 # 4. LCARS VIEWS
