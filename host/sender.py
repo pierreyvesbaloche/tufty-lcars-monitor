@@ -132,6 +132,7 @@ def main():
     last_ping = 0
     PING_INTERVAL = 2  # Send heartbeat PING frame every 2 seconds (1.2)
     ping_counter = 0
+    seq_counter = 0  # 1.3: monotonic telemetry frame sequence (wraps at 65536)
 
     while True:
         try:
@@ -148,6 +149,13 @@ def main():
                 f"DISK_PCT:{disk.percent:.1f}|DISK_U:{disk.used / 1e9:.1f}|DISK_T:{disk.total / 1e9:.1f}|"
                 f"ETH:{eth}|WIFI:{wifi}"
             )
+
+            # 1.3 — append the frame sequence number (monotonic, wraps at
+            # 65536) so the Tufty can detect gaps (dropped frame) and
+            # duplicates (retransmission). Stale frames are flagged, not
+            # merged: the frame is dropped and the last-good data kept.
+            payload += f"|SEQ:{seq_counter}"
+            seq_counter = (seq_counter + 1) % 65536
 
             payload += "\n"
             ser.write(payload.encode('utf-8'))
