@@ -177,25 +177,19 @@ def update_backlight():
 # Poll each physical button, fold the 30 ms debounce, and return a set of
 # *newly-pressed* logical buttons. The main loop calls this once per tick;
 # the returned names are dispatched by `_on_button()`.
-# Diagnostics (remove after the field-test issue is resolved):
-#   [BOOT-TICK]  — proves the main loop is iterating and reaching _sample_buttons().
-#   [RAW-PRESS]  — fires the instant any physical is_pressed flips to True,
-#                  regardless of debounce. If you see this but no [MODE]/screen
-#                  change, the debounce is eating the press. If you never see
-#                  it, the main loop is not running (or is_pressed never flips).
-_BOOT_TICKS = 0
-
 def _sample_buttons():
-    global _BOOT_TICKS
+    """Poll every physical button, fold the edge-hold debounce, and return
+    the list of names that transitioned to *pressed* this tick.
+
+    The Pimoroni `Button` class already applies its own internal filtering;
+    this layer adds a `DEBOUNCE_MS` edge-hold on top, which is what kills
+    single-frame glitches at the 100 Hz main-loop cadence.
+    """
     out = []
     now_ms = time.ticks_ms()
-    any_raw = False
     for name, obj in _btn_objects.items():
         st = _btn_states[name]
         raw = bool(obj.is_pressed)
-        if raw:
-            any_raw = True
-            print(f"[RAW-PRESS] {name} is_pressed=True @ {now_ms} ms")
         if raw != st["cur"]:
             if time.ticks_diff(now_ms, st["t"]) >= DEBOUNCE_MS:
                 st["cur"] = raw
@@ -203,11 +197,9 @@ def _sample_buttons():
                 if raw:
                     out.append(name)
             else:
+                # Edge seen, but not held long enough — restart the timer.
                 st["t"] = now_ms
         st["prev"] = raw
-    _BOOT_TICKS += 1
-    if _BOOT_TICKS in (1, 100, 500, 1000):
-        print(f"[BOOT-TICK] main-loop tick #{_BOOT_TICKS} @ {now_ms} ms")
     return out
 
 def _on_button(name):
