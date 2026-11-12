@@ -146,21 +146,22 @@ def main():
                 f"ETH:{eth}|WIFI:{wifi}"
             )
 
-            # Append time synchronization if 60 seconds have passed
+            payload += "\n"
+            ser.write(payload.encode('utf-8'))
+
+            # Time sync is its own frame type (1.1): sent on its own line
+            # whenever SYNC_INTERVAL has elapsed, independently of telemetry.
             if current_now - last_sync_time >= SYNC_INTERVAL:
                 # Calculate target time with timezone offset
                 target_time = time.gmtime(current_now + (args.offset * 3600))
                 time_str = time.strftime("%Y,%m,%d,%H,%M,%S", target_time)
-                
-                payload += f"|INIT_TIME:{time_str}"
+
+                ser.write(f"INIT_TIME:{time_str}\n".encode('utf-8'))
                 last_sync_time = current_now
-                
+
                 # Display time sync message ONLY in debug mode
                 if args.debug:
                     print(f"[TIME SYNC] Sent time payload: {time_str} (Offset {args.offset:+d}h)")
-
-            payload += "\n"
-            ser.write(payload.encode('utf-8'))
 
             if args.debug:
                 while ser.in_waiting:

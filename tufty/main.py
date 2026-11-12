@@ -659,34 +659,40 @@ while True:
         if spoll.poll(1):
             line = sys.stdin.readline()
             if line:
-                try:
-                    frame = {}
-                    parts = line.strip().split('|')
-                    for part in parts:
-                        if ':' in part:
-                            k, v = part.split(':', 1)
+                line = line.strip()
+                # 1.1 — INIT_TIME is now a standalone frame type, no longer
+                # a key inside the telemetry dict. It still counts as host
+                # liveness: update last_rx_time so the 5 s COMM FAILURE
+                # timer only fires when neither telemetry nor sync frames
+                # arrive.
+                if line.startswith("INIT_TIME:"):
+                    sync_rtc(line[len("INIT_TIME:"):])
+                    has_received_data = True
+                    last_rx_time = time.time()
+                else:
+                    try:
+                        frame = {}
+                        parts = line.split('|')
+                        for part in parts:
+                            if ':' in part:
+                                k, v = part.split(':', 1)
 
-                            # Handle time sync payload
-                            if k == "INIT_TIME":
-                                sync_rtc(v)
-                                continue
+                                k_lower = k.lower()
+                                if k_lower in ['eth', 'wifi']:
+                                    frame[k_lower] = v
+                                else:
+                                    try:
+                                        frame[k_lower] = float(v)
+                                    except ValueError:
+                                        pass
 
-                            k_lower = k.lower()
-                            if k_lower in ['eth', 'wifi']:
-                                frame[k_lower] = v
-                            else:
-                                try:
-                                    frame[k_lower] = float(v)
-                                except ValueError:
-                                    pass
-
-                    if frame:
-                        TELEMETRY.update(frame)
-                        data_received = True
-                        has_received_data = True
-                        last_rx_time = time.time()
-                except Exception:
-                    pass
+                        if frame:
+                            TELEMETRY.update(frame)
+                            data_received = True
+                            has_received_data = True
+                            last_rx_time = time.time()
+                    except Exception:
+                        pass
 
         now_ms = time.ticks_ms()
 

@@ -70,9 +70,9 @@ Frames are sent as UTF-8 single-line strings delimited by pipes (`|`) and termin
   ```text
   CPU:12.5|RAM_PCT:48.2|RAM_U:7.7|RAM_T:16.0|DISK_PCT:62.1|DISK_U:310.5|DISK_T:500.0|ETH:192.168.1.50|WIFI:N/A
   ```
-- **Telemetry + Time-Sync Payload:** `INIT_TIME` rides on the *same* line as the telemetry frame, appended as the last `|`-separated field. The value is a comma-separated `YYYY,MM,DD,HH,MM,SS` string (not a Unix epoch — MicroPython's `rtc.datetime()` requires it), timezone-shifted by `--offset`. It is sent on the first telemetry frame and then re-sent every 60 s (`SYNC_INTERVAL`), so the Tufty can correct RTC drift:
+- **Time-Sync Payload:** sent as its **own line**, `INIT_TIME:YYYY,MM,DD,HH,MM,SS`. The value is a comma-separated date/time string (not a Unix epoch — MicroPython's `rtc.datetime()` requires it), timezone-shifted by `--offset`. It is sent on startup and then re-sent every 60 s (`SYNC_INTERVAL`), so the Tufty can correct RTC drift:
   ```text
-  CPU:12.5|RAM_PCT:48.2|...|ETH:192.168.1.50|WIFI:N/A|INIT_TIME:2026,11,12,19,45,00
+  INIT_TIME:2026,11,12,19,45,00
   ```
 
 ---
