@@ -252,12 +252,16 @@ def draw_battery_icon(x, y, w, h):
         display.rectangle(x + 2, y + 2, fill_w, h - 4)
 
     # USB bolt *inside* the battery body, top-right of the fill area.
-    # 3x5 px (two vertical bars, 1 px gap) — visible as a lightning bolt
-    # at PEN_P4 4-bit depth. The previous 2x4 read as a square.
+    # 3x5 px *diagonal* zigzag (two offset bars, 1 px apart) so it reads
+    # as a lightning bolt, not a square. PEN_P4 has no line/segment
+    # primitives, so we fake the diagonal with two 2x2 rectangles:
+    #   bar 1: (x+w-8, y+1)  top-left
+    #   bar 2: (x+w-6, y+3)  bottom-right, 1 px right + 2 px down
+    # The 1 px horizontal offset between them gives the "inclined" look.
     if usb_detect is not None and usb_detect.value() == 1:
         display.set_pen(GOLD_LCARS)
-        display.rectangle(x + w - 8, y + 2, 2, 5)
-        display.rectangle(x + w - 5, y + 2, 2, 5)
+        display.rectangle(x + w - 8, y + 1, 2, 2)
+        display.rectangle(x + w - 6, y + 3, 2, 2)
 
 
 # ==============================================================================
